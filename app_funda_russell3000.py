@@ -28,49 +28,47 @@ if Ticker is None:
 # ------------------------
 # UNIVERSE : RUSSELL 3000 DEPUIS EXCEL
 # ------------------------
+import os
+import pandas as pd
+import streamlit as st
 
-# 👉 Ajuste ce chemin si ton script n'est pas au même endroit
-# Ici on suppose un sous-dossier `sp500_builder` à côté du script.
-RUSSELL_PATH = os.path.join("sp500_builder", "russell3000_constituents.xlsx")
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+RUSSELL_PATH = os.path.join(SCRIPT_DIR, "russell3000_constituents.xlsx")
 
 @st.cache_data(ttl=3600)
-def fetch_russell3000_universe(path: str = RUSSELL_PATH) -> pd.DataFrame:
-    """
-    Charge l'univers Russell 3000 depuis un fichier Excel.
-    Le fichier peut avoir diverses colonnes (Symbol, Ticker, Name, Sector, Industry, etc.).
-    On essaie de mapper proprement vers : ticker, name, sector, industry.
-    """
-    if not os.path.exists(path):
+def fetch_russell3000_universe() -> pd.DataFrame:
+    st.write("📁 Dossier courant :", SCRIPT_DIR)
+    st.write("📄 Contenu du dossier :", os.listdir(SCRIPT_DIR))
+
+    if not os.path.exists(RUSSELL_PATH):
         raise FileNotFoundError(
-            f"Fichier Russell 3000 introuvable : {path}\n"
-            f"Vérifie le chemin (RUSSELL_PATH)."
+            f"❌ Fichier Russell introuvable.\n"
+            f"Chemin attendu : {RUSSELL_PATH}\n"
+            "👉 Vérifie que tu as bien poussé le fichier dans la même branche que l'app déployée."
         )
 
-    df = pd.read_excel(path)
+    st.success(f"📌 Fichier trouvé : {RUSSELL_PATH}")
 
-    # Mapping automatique des colonnes
+    df = pd.read_excel(RUSSELL_PATH)
+
+    # Détection des colonnes
     colmap = {}
     for c in df.columns:
         lc = c.lower()
         if "symbol" in lc or "ticker" in lc:
             colmap[c] = "ticker"
-        elif "security" in lc or "name" in lc or "company" in lc:
+        elif "name" in lc or "security" in lc or "company" in lc:
             colmap[c] = "name"
         elif "sector" in lc:
             colmap[c] = "sector"
-        elif "sub" in lc and "industry" in lc:
-            # Sub-Industry
-            colmap[c] = "industry"
-        elif "industry" in lc and "sector" not in lc:
-            # fallback si une colonne "Industry" simple
+        elif "industry" in lc:
             colmap[c] = "industry"
 
     df = df.rename(columns=colmap)
 
     if "ticker" not in df.columns:
         raise ValueError(
-            "Impossible de trouver une colonne ticker/symbol dans le fichier "
-            "(colonnes attendues : Symbol, Ticker, etc.)."
+            "Impossible de détecter la colonne 'ticker' dans l'Excel."
         )
 
     df["ticker"] = (
@@ -80,10 +78,8 @@ def fetch_russell3000_universe(path: str = RUSSELL_PATH) -> pd.DataFrame:
         .str.replace(r"[^\w\.\-]", "", regex=True)
     )
 
-    keep_cols = [c for c in ["ticker", "name", "sector", "industry"] if c in df.columns]
-    df = df[keep_cols].drop_duplicates(subset=["ticker"]).reset_index(drop=True)
-    return df
-
+    keep = [c for c in ["ticker", "name", "sector", "industry"] if c in df.columns]
+    return df[keep].drop_duplicates(subset=["ticker"]).reset_index(drop=True)
 # ------------------------
 # HELPERS
 # ------------------------
