@@ -1,4 +1,8 @@
-import os, io, time, math, requests
-import pandas as pd
-import numpy as np
-import streamlit as st
+streamlit>=1.32.0
+pandas>=2.0.0
+numpy>=1.24.0
+requests>=2.31.0
+yahooquery>=2.3.0
+python-dotenv>=1.0.0
+lxml>=4.9.0
+openpyxl>=3.1.0
